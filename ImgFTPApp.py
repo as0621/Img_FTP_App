@@ -6,11 +6,10 @@
 import tkinter as tk
 from tkinter import filedialog
 from tkinter import ttk
-from tkinter.messagebox import showinfo
 from ImgFTPModel import ImgFTPModel
 from ImgFTPController import ImgFTPController
 import os
-from sys import exit
+import threading
 
 
 class App:
@@ -92,7 +91,7 @@ class DateRangeFrame(tk.Frame):
         self.end_datetime_range_entry.grid(row=2, column=2, padx=20, sticky='w')
 
     def create_start_datetime_range_title(self):
-        title = ttk.Label(self, text='Start Datetime Range (YYYY/MM/DD HH:MM:SS):')
+        title = ttk.Label(self, text='Start Datetime Range (YYYY-MM-DD HH:MM:SS):')
         return title
 
     def create_start_datetime_range_entry(self):
@@ -100,7 +99,7 @@ class DateRangeFrame(tk.Frame):
         return entry_box
 
     def create_end_datetime_range_title(self):
-        title = ttk.Label(self, text='End Datetime Range (YYYY/MM/DD HH:MM:SS):')
+        title = ttk.Label(self, text='End Datetime Range (YYYY-MM-DD HH:MM:SS):')
         return title
 
     def create_end_datetime_range_entry(self):
@@ -346,31 +345,23 @@ class ExecuteFrame(tk.Frame):
         self.parent = parent
         self.model = parent.model
         self.controller = parent.controller
+        self.status_var = tk.StringVar()
+
         self.execute_button = self.create_execute_button()
+        self.execute_status_label = self.create_execute_status_label()
 
         self.execute_button.pack(anchor='n')
+        self.execute_status_label.pack(anchor='n')
 
     def create_execute_button(self):
         button = ttk.Button(self, text="Execute", command=self.execute_pull)
         return button
 
     def execute_pull(self):
-        popup_root = self.create_popup_window(self.controller.tk_status)
-        self.controller.get_images()
-        self.kill_popup_window_button(popup_root)
+        thread = threading.Thread(target=self.controller.get_images, args=(self.status_var, ))
+        thread.start()
 
-    def create_popup_window(self, status_var):
-        root = tk.Tk()
-        popup_label = tk.Label(root, textvariable=status_var)
-        popup_label.pack()
-        root.geometry('400x50')
-        root.mainloop()
+    def create_execute_status_label(self):
+        label = ttk.Label(self, textvariable=self.status_var)
+        return label
 
-        return root
-
-    def kill_popup_window_button(self, root):
-        kill_button = ttk.Button(root, command=lambda: self.kill_popup_window(root))
-        kill_button.pack()
-
-    def kill_popup_window(self, root):
-        root.destroy()
