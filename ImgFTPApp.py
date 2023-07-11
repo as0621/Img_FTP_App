@@ -8,12 +8,15 @@ from tkinter import filedialog
 from tkinter import ttk
 from tkinter.messagebox import showinfo
 from ImgFTPModel import ImgFTPModel
+from ImgFTPController import ImgFTPController
+import os
+from sys import exit
 
 
 class App:
     # Constants
     APP_TITLE = 'FAST ImgServer Pull'
-    APP_SIZE = '600x400'
+    APP_SIZE = '800x400'
 
     # Initializes frame
     def __init__(self):
@@ -33,7 +36,7 @@ class App:
         self.model = ImgFTPModel(root)
 
     def initialize_controller(self):
-        pass
+        self.controller = ImgFTPController(self.model)
 
     def initialize_view(self, root):
         MainFrame(root, self.model, self.controller).pack(side='top')
@@ -89,19 +92,19 @@ class DateRangeFrame(tk.Frame):
         self.end_datetime_range_entry.grid(row=2, column=2, padx=20, sticky='w')
 
     def create_start_datetime_range_title(self):
-        title = tk.Label(self, text='Start Datetime Range (YYYY/MM/DD HH:MM:SS):')
+        title = ttk.Label(self, text='Start Datetime Range (YYYY/MM/DD HH:MM:SS):')
         return title
 
     def create_start_datetime_range_entry(self):
-        entry_box = tk.Entry(self, textvariable=self.model.start_datetime_var)
+        entry_box = ttk.Entry(self, textvariable=self.model.start_datetime_var)
         return entry_box
 
     def create_end_datetime_range_title(self):
-        title = tk.Label(self, text='End Datetime Range (YYYY/MM/DD HH:MM:SS):')
+        title = ttk.Label(self, text='End Datetime Range (YYYY/MM/DD HH:MM:SS):')
         return title
 
     def create_end_datetime_range_entry(self):
-        entry_box = tk.Entry(self, textvariable=self.model.end_datetime_var)
+        entry_box = ttk.Entry(self, textvariable=self.model.end_datetime_var)
         return entry_box
 
 
@@ -120,19 +123,19 @@ class TargetDirectoryFrame(tk.Frame):
         self.target_directory_button.grid(row=1, column=2, sticky='e')
 
     def create_target_directory_title(self):
-        title = tk.Label(self, text='Current Image Home Directory:')
+        title = ttk.Label(self, text='Current Image Home Directory:')
         return title
 
     def create_target_directory_label(self):
-        label = tk.Label(self, textvariable=self.model.home_directory_var, width=80, anchor='w')
+        label = ttk.Label(self, textvariable=self.model.home_directory_var, width=80, anchor='w')
         return label
 
     def create_target_directory_button(self):
-        button = tk.Button(self, text='Select Directory', command=self.open_directory_selector)
+        button = ttk.Button(self, text='Select Directory', command=self.open_directory_selector)
         return button
 
     def open_directory_selector(self):
-        filepath = tk.filedialog.askdirectory()
+        filepath = filedialog.askdirectory()
         self.model.home_directory = filepath
 
 
@@ -186,20 +189,26 @@ class QualityFrame(tk.Frame):
 
         self.model.quality_var.trace('w', self.refresh_reject_dropdown_state)
 
-        self.quality_title.pack(anchor='w')
+        self.quality_title.pack(anchor='nw')
         for radio_button in self.quality_radio_buttons:
-            radio_button.pack(anchor='w')
-        self.quality_reject_dropdown.pack(anchor='w')
+            radio_button.pack(anchor='nw')
+            radio_button.configure(state='disabled')
+        self.quality_reject_dropdown.pack(anchor='nw')
+
+        # Temporary enable reject radio
+        self.quality_radio_buttons[-1].configure(state='normal')
 
     def create_quality_title(self):
-        label = tk.Label(self, text='Quality:')
+        label = ttk.Label(self, text='Quality:')
         return label
 
     def create_quality_radio_button(self):
-        gd_radio_button = tk.Radiobutton(self, text='Gd', variable=self.model.quality_var, value='Gd')
-        bd_radio_button = tk.Radiobutton(self, text='Bd', variable=self.model.quality_var, value='Bd')
-        all_radio_button = tk.Radiobutton(self, text='All', variable=self.model.quality_var, value='All')
-        reject_radio_button = tk.Radiobutton(self, text='Reject', variable=self.model.quality_var, value='Reject')
+        gd_radio_button = ttk.Radiobutton(self, text='Gd', variable=self.model.quality_var, value='Gd')
+        bd_radio_button = ttk.Radiobutton(self, text='Bd', variable=self.model.quality_var, value='Bd')
+        all_radio_button = ttk.Radiobutton(self, text='All', variable=self.model.quality_var, value='All')
+        reject_radio_button = ttk.Radiobutton(self, text='Reject', variable=self.model.quality_var, value='Reject')
+
+        # reject_radio_button.configure(state='disabled')
 
         return gd_radio_button, bd_radio_button, all_radio_button, reject_radio_button
 
@@ -215,7 +224,6 @@ class QualityFrame(tk.Frame):
             self.quality_reject_dropdown.configure(state='disabled')
 
     def refresh_reject_dropdown(self):
-        # self.model.quality = ImgFTPModel.OPTION_MENU_DEFAULT
         self.quality_reject_dropdown['menu'].delete(0, 'end')
 
         new_options = self.model.reject_list
@@ -242,16 +250,19 @@ class InspectionFrame(tk.Frame):
         self.inspection_check_button.pack(anchor='nw')
         self.inspection_entry.pack(anchor='nw')
 
+        # Temporary disable
+        self.inspection_check_button.configure(state='disabled')
+
     def create_inspection_title(self):
         title = tk.Label(self, text='Custom Preferences: ')
         return title
 
     def create_inspection_check_button(self):
-        check_button = tk.Checkbutton(self, text='Cstm Inspection #', variable=self.custom_inspection_bool)
+        check_button = ttk.Checkbutton(self, text='Cstm Inspection #', variable=self.custom_inspection_bool)
         return check_button
 
     def create_inspection_entry(self):
-        entry_box = tk.Entry(self, textvariable=self.model.inspection_var)
+        entry_box = ttk.Entry(self, textvariable=self.model.inspection_var)
         entry_box.configure(state='disabled')
         return entry_box
 
@@ -270,17 +281,63 @@ class SettingsFrame(tk.Frame):
         self.model = parent.model
         self.settings_title = self.create_settings_title()
         self.settings_save_txid_checkbox = self.create_settings_save_txid_checkbox()
+        self.settings_use_scada_checkbox = self.create_settings_use_scada_checkbox()
+        self.settings_use_scada_filepath_button = self.create_settings_use_scada_filepath_button()
+        self.settings_use_scada_filepath_label = self.create_settings_use_scada_filepath_label()
 
         self.settings_title.pack(anchor='w')
         self.settings_save_txid_checkbox.pack(anchor='w')
+        self.settings_use_scada_checkbox.pack(anchor='w')
+        self.settings_use_scada_filepath_button.pack(anchor='w')
+        self.settings_use_scada_filepath_label.pack(anchor='w')
+
+        # Momentary disable
+        self.settings_save_txid_checkbox.configure(state='disabled')
+        self.settings_use_scada_checkbox.configure(state='disabled')
 
     def create_settings_title(self):
         title = tk.Label(self, text='Settings: ')
         return title
 
     def create_settings_save_txid_checkbox(self):
-        check_button = tk.Checkbutton(self, text='Save TxID in csv', variable=self.model.settings_save_txid_var)
+        check_button = ttk.Checkbutton(self, text='Save TxID in csv', variable=self.model.settings_save_txid_var)
         return check_button
+
+    def create_settings_use_scada_checkbox(self):
+        check_button = ttk.Checkbutton(self, text='Use SCADA export (.csv)', variable=self.model.settings_use_scada_var,
+                                       command=self.scada_mode_change_status)
+        return check_button
+
+    def create_settings_use_scada_filepath_button(self):
+        button = ttk.Button(self, text='Load SCADA export', command=self.load_scada_filepath)
+        button.configure(state='disabled')
+        return button
+
+    def create_settings_use_scada_filepath_label(self):
+        label = ttk.Label(self, textvariable=self.model.settings_use_scada_filepath_var, width=80)
+        return label
+
+    def load_scada_filepath(self):
+        file = filedialog.askopenfilename(filetypes=[('SCADA export CSV (.csv)', '*.csv')], initialdir='C:/myExports/')
+        self.model.settings_use_scada_filepath = os.path.abspath(file)
+
+    def scada_mode_change_status(self):
+        if self.model.settings_use_scada:
+            self.parent.date_range_frame.start_datetime_range_entry.delete(0, 'end')
+            self.parent.date_range_frame.start_datetime_range_entry.configure(state='disabled')
+            self.parent.date_range_frame.end_datetime_range_entry.delete(0, 'end')
+            self.parent.date_range_frame.end_datetime_range_entry.configure(state='disabled')
+            # self.parent.quality_frame.quality_radio_buttons[-1].configure(state='normal')
+            # self.parent.quality_frame.quality_reject_dropdown.configure(state='normal')
+            self.settings_use_scada_filepath_button.configure(state='normal')
+        else:
+            self.parent.date_range_frame.start_datetime_range_entry.configure(state='normal')
+            self.parent.date_range_frame.end_datetime_range_entry.configure(state='normal')
+            # self.parent.quality_frame.quality_radio_buttons[-1].configure(state='active')
+            # self.parent.quality_frame.quality_radio_buttons[-1].configure(state='disabled')
+            # self.parent.quality_frame.quality_reject_dropdown.configure(state='disabled')
+            self.model.settings_use_scada_filepath = ''
+            self.settings_use_scada_filepath_button.configure(state='disabled')
 
 
 class ExecuteFrame(tk.Frame):
@@ -288,24 +345,32 @@ class ExecuteFrame(tk.Frame):
         tk.Frame.__init__(self, parent)
         self.parent = parent
         self.model = parent.model
+        self.controller = parent.controller
         self.execute_button = self.create_execute_button()
 
         self.execute_button.pack(anchor='n')
 
     def create_execute_button(self):
-        button = tk.Button(self, text="Execute", command=self.execute_pull)
+        button = ttk.Button(self, text="Execute", command=self.execute_pull)
         return button
 
     def execute_pull(self):
-        model = self.model
-        print(f"Executing Request\n"
-              f"-----------------\n"
-              f"start datetime: {model.start_datetime}\n"
-              f"end datetime: {model.end_datetime}\n"
-              f"home: {model.home_directory}\n"
-              f"eq: {model.eq}\n"
-              f"eq no: {model.eq_number}\n"
-              f"quality: {model.quality}\n"
-              f"reject: {model.selected_reject}\n"
-              f"inspection: {model.inspection}\n"
-              f"save_txid: {model.settings_save_txid}\n")
+        popup_root = self.create_popup_window(self.controller.tk_status)
+        self.controller.get_images()
+        self.kill_popup_window_button(popup_root)
+
+    def create_popup_window(self, status_var):
+        root = tk.Tk()
+        popup_label = tk.Label(root, textvariable=status_var)
+        popup_label.pack()
+        root.geometry('400x50')
+        root.mainloop()
+
+        return root
+
+    def kill_popup_window_button(self, root):
+        kill_button = ttk.Button(root, command=lambda: self.kill_popup_window(root))
+        kill_button.pack()
+
+    def kill_popup_window(self, root):
+        root.destroy()
