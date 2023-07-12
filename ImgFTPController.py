@@ -11,6 +11,7 @@ import tkinter as tk
 
 
 class ImgFTPController:
+    VERSION = "0.0.1"
     def __init__(self, model):
         self.model = model
         self.sql = SQLController()
@@ -40,26 +41,30 @@ class ImgFTPController:
 
     def get_images(self, tk_status):
         # print(self.model)
+
         sql_txid_list = self.sql.get_txid_list_from_rejects(self.model.start_datetime,
                                                             self.model.end_datetime,
                                                             self.model.selected_reject,
                                                             tk_status)
 
-        name_list = self.ftp.get_images_list(self.model.home_directory,
-                                             self.model.eq,
-                                             self.model.eq_number,
-                                             self.model.start_year,
-                                             self.model.start_month,
-                                             self.model.start_day,
-                                             self.model.quality,
-                                             self.model.selected_reject,
-                                             tk_status,
-                                             txid_list=sql_txid_list,
-                                             )
+        if len(sql_txid_list) > 0:
+            name_list = self.ftp.get_images_list(self.model.home_directory,
+                                                 self.model.eq,
+                                                 self.model.eq_number,
+                                                 self.model.start_year,
+                                                 self.model.start_month,
+                                                 self.model.start_day,
+                                                 self.model.quality,
+                                                 self.model.selected_reject,
+                                                 self.model.inspection,
+                                                 tk_status,
+                                                 txid_list=sql_txid_list,
+                                                 )
 
-        self.ftp.get_images(name_list, tk_status)
-
-        tk_status.set('DONE')
+            self.ftp.get_images(name_list, tk_status)
+            tk_status.set('DONE')
+        else:
+            tk_status.set(f'ERROR: No {self.model.eq} {self.model.selected_reject} Rejects.')
 
 
 class FTPController:
@@ -86,29 +91,28 @@ class FTPController:
         if not os.path.exists(self.target_path_directory):
             os.makedirs(self.target_path_directory)
 
-    def get_images_list(self, home_dir, eq, eq_num, year, month, day, quality, reject, tk_status, txid_list=None):
-        # TO DO: Status
+    def get_images_list(self, home_dir, eq, eq_num, year, month, day, quality, reject, inspection, tk_status,
+                        txid_list=None):
         tk_status.set('Creating local directory...')
         print("Creating local directory....")
         self.create_dir(home_dir, eq, year, month, day, quality, reject)  # Create local directory
 
-        # TO DO: Status
         tk_status.set('Getting directory...')
         print("Getting directory....")
         self.change_ftp_dir(eq_num, year, month, day)
-        name_list = self.ftp.nlst('*.bmp')
 
-        if txid_list:
-            name_list = [f"{name}" for name in name_list if any(txid in name for txid in txid_list)]
+        name_list = self.ftp.nlst('*.bmp')
+        name_list = [f"{name}" for name in name_list if any(txid in name for txid in txid_list)]
+
+        # Inspection Filter
+        if inspection:
+            name_list = [f"{name}" for name in name_list if inspection in name]
 
         return name_list
 
     def get_images(self, name_list, tk_status):
-        # TO DO: Status
-        tk_status.set('Transferring Images...')
-        print("Transferring Images....")
+        tk_status.set('Starting Transfer...')
         for f in name_list:
-            # TO DO: Status
             tk_status.set("Transferring " + str(f) + "....")
             print("Transferring " + str(f) + "....")
             with open(os.path.join(self.target_path_directory, f), 'wb') as fh:
@@ -132,6 +136,10 @@ class SQLController:
 
         cursor = self.conn.cursor()
 
+        print("SELECT [TXID] FROM [MfgFstCentral].[ENG].[vwFSTProcessRecords]   "
+              "WHERE Site = 'SAN' AND "
+              f"RejectCode = {reject_code} AND "
+              f"CompletedDateTime BETWEEN '{start_time}' AND '{end_time}'")
         cursor.execute("SELECT [TXID] FROM [MfgFstCentral].[ENG].[vwFSTProcessRecords]   "
                        "WHERE Site = 'SAN' AND "
                        f"RejectCode = {reject_code} AND "

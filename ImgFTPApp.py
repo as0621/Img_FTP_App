@@ -14,6 +14,7 @@ import threading
 
 class App:
     # Constants
+    VERSION = "0.0.1"
     APP_TITLE = 'FAST ImgServer Pull'
     APP_SIZE = '800x400'
 
@@ -250,7 +251,7 @@ class InspectionFrame(tk.Frame):
         self.inspection_entry.pack(anchor='nw')
 
         # Temporary disable
-        self.inspection_check_button.configure(state='disabled')
+        # self.inspection_check_button.configure(state='disabled')
 
     def create_inspection_title(self):
         title = tk.Label(self, text='Custom Preferences: ')

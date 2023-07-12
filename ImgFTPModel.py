@@ -8,20 +8,25 @@ import tkinter as tk
 class ImgFTPModel:
     VERSION = "0.0.1"
     OPTION_MENU_DEFAULT = 'Select One...'
-    EQ_LIST = {'SNL': 'EQ-901853-004',
-               'Equipment2': 'EQ-2',
-               'Equipment3': 'EQ-3'}
-    REJECT_LIST = {'EQ-901853-004': ['6210',
-                                     '6208',
-                                     '6050'],
-                   'EQ-2': ['EQ2_FC1',
-                            'EQ2_FC2',
-                            'EQ2_FC3'],
-                   'EQ-3': ['EQ3_FC1',
-                            'EQ3_FC2',
-                            'EQ3_FC3'],
-                   'default': ['None']
-                   }
+    EQ_LIST = {'TED': 'EQ-901848-004',
+               'ABL': 'EQ-901849-004',
+               'CLOUE LD': 'EQ-902282-001',
+               'CLOUE UNLD': 'EQ-902280-001',
+               'SNL': 'EQ-901853-004',
+               'PAT': 'EQ-902044-004',
+               'MAC': 'EQ-902045-004',
+               'XFC': 'EQ-902046-004',
+               'FTC': 'EQ-902031-003',
+               'PLR': 'EQ-902050-003',
+               'CAP': 'EQ-902051-003',
+               'TLA': 'EQ-902052-003',
+               'OFF': 'EQ-902053-003'}
+    REJECT_LIST = {
+        'EQ-901853-004': ['6102', '6103', '6104', '6105', '6106', '6200', '6202', '6204', '6207', '6208', '6209'],
+        'EQ-901849-004': ['2010', '2011', '2024', '2049'],
+        'EQ-902050-003': ['11010'],
+        'default': ['None']
+        }
 
     def __init__(self, root):
         self.start_datetime_var = tk.StringVar(root)
@@ -37,8 +42,8 @@ class ImgFTPModel:
         self.settings_use_scada_filepath_var = tk.StringVar(root)
 
         # Debug
-        self.start_datetime_var.set('2023-07-10 15:00:00')
-        self.end_datetime_var.set('2023-07-11 00:00:00')
+        self.start_datetime_var.set('YYYY-MM-DD HH:MM:SS')
+        self.end_datetime_var.set('YYYY-MM-DD HH:MM:SS')
 
         # TODO: Move traces to it's own function
         self.eq_var.trace_add('write', self.update_eq_name)
@@ -121,7 +126,7 @@ class ImgFTPModel:
 
     @property
     def inspection(self):
-        return self.inspection_var.get()
+        return self.inspection_var.get() if len(self.inspection_var.get())>0 else None
 
     @property
     def selected_reject(self):
