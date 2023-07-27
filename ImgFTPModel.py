@@ -6,7 +6,7 @@ import tkinter as tk
 
 
 class ImgFTPModel:
-    VERSION = "0.0.1"
+    VERSION = "0.0.2"
     OPTION_MENU_DEFAULT = 'Select One...'
     EQ_LIST = {'TED': 'EQ-901848-004',
                'ABL': 'EQ-901849-004',
@@ -22,9 +22,11 @@ class ImgFTPModel:
                'TLA': 'EQ-902052-003',
                'OFF': 'EQ-902053-003'}
     REJECT_LIST = {
+        'EQ-901848-004': ['1001', '1002', '1003', '1010'],
         'EQ-901853-004': ['6102', '6103', '6104', '6105', '6106', '6200', '6202', '6204', '6207', '6208', '6209'],
         'EQ-901849-004': ['2010', '2011', '2024', '2049'],
         'EQ-902050-003': ['11010'],
+        'EQ-902052-003': ['13210'],
         'default': ['None']
         }
 
@@ -87,17 +89,17 @@ class ImgFTPModel:
         self.start_datetime_var.set(datetime)
 
     @property
-    def start_year(self):
+    def start_year(self) -> str:
         date, year, month, day = ImgFTPModel.split_date_var(self.start_datetime)
         return year
 
     @property
-    def start_month(self):
+    def start_month(self) -> str:
         date, year, month, day = ImgFTPModel.split_date_var(self.start_datetime)
         return month
 
     @property
-    def start_day(self):
+    def start_day(self) -> str:
         date, year, month, day = ImgFTPModel.split_date_var(self.start_datetime)
         return day
 
@@ -110,19 +112,27 @@ class ImgFTPModel:
         self.end_datetime_var.set(datetime)
 
     @property
-    def end_year(self):
+    def end_year(self) -> str:
         date, year, month, day = ImgFTPModel.split_date_var(self.end_datetime)
         return year
 
     @property
-    def end_month(self):
+    def end_month(self) -> str:
         date, year, month, day = ImgFTPModel.split_date_var(self.end_datetime)
         return month
 
     @property
-    def end_day(self):
+    def end_day(self) -> str:
         date, year, month, day = ImgFTPModel.split_date_var(self.end_datetime)
         return day
+
+    @property
+    def list_of_months(self):
+        return [day for day in range(int(self.start_month), int(self.end_month)+1)]
+
+    @property
+    def list_of_days(self):
+        return [day for day in range(int(self.start_day), int(self.end_day)+1)]
 
     @property
     def inspection(self):

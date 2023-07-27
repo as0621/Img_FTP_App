@@ -11,7 +11,7 @@ import tkinter as tk
 
 
 class ImgFTPController:
-    VERSION = "0.0.1"
+    VERSION = "0.0.2"
     def __init__(self, model):
         self.model = model
         self.sql = SQLController()
@@ -40,29 +40,29 @@ class ImgFTPController:
         print(txid_list)
 
     def get_images(self, tk_status):
-        # print(self.model)
-
         sql_txid_list = self.sql.get_txid_list_from_rejects(self.model.start_datetime,
                                                             self.model.end_datetime,
                                                             self.model.selected_reject,
                                                             tk_status)
 
         if len(sql_txid_list) > 0:
-            name_list = self.ftp.get_images_list(self.model.home_directory,
-                                                 self.model.eq,
-                                                 self.model.eq_number,
-                                                 self.model.start_year,
-                                                 self.model.start_month,
-                                                 self.model.start_day,
-                                                 self.model.quality,
-                                                 self.model.selected_reject,
-                                                 self.model.inspection,
-                                                 tk_status,
-                                                 txid_list=sql_txid_list,
-                                                 )
+            for day in self.model.list_of_days:
+                tk_status.set(f'Getting data for day: {day}')
+                name_list = self.ftp.get_images_list(self.model.home_directory,
+                                                     self.model.eq,
+                                                     self.model.eq_number,
+                                                     self.model.start_year,
+                                                     self.model.start_month,
+                                                     str(day),
+                                                     self.model.quality,
+                                                     self.model.selected_reject,
+                                                     self.model.inspection,
+                                                     tk_status,
+                                                     txid_list=sql_txid_list,
+                                                     )
 
-            self.ftp.get_images(name_list, tk_status)
-            tk_status.set('DONE')
+                self.ftp.get_images(name_list, tk_status)
+                tk_status.set('DONE')
         else:
             tk_status.set(f'ERROR: No {self.model.eq} {self.model.selected_reject} Rejects.')
 
@@ -97,8 +97,8 @@ class FTPController:
         print("Creating local directory....")
         self.create_dir(home_dir, eq, year, month, day, quality, reject)  # Create local directory
 
-        tk_status.set('Getting directory...')
-        print("Getting directory....")
+        tk_status.set(f'Getting directory for {year}/{month}/{day}...')
+        print(f"Getting directory for {year}/{month}/{day}....")
         self.change_ftp_dir(eq_num, year, month, day)
 
         name_list = self.ftp.nlst('*.bmp')
