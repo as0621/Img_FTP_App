@@ -3,10 +3,11 @@
 # 2023/07/08
 
 import tkinter as tk
+from datetime import datetime, time
 
 
 class ImgFTPModel:
-    VERSION = "0.0.2"
+    VERSION = "0.0.3"
     OPTION_MENU_DEFAULT = 'Select One...'
     EQ_LIST = {'TED': 'EQ-901848-004',
                'ABL': 'EQ-901849-004',
@@ -22,13 +23,23 @@ class ImgFTPModel:
                'TLA': 'EQ-902052-003',
                'OFF': 'EQ-902053-003'}
     REJECT_LIST = {
-        'EQ-901848-004': ['1001', '1002', '1003', '1010'],
+        'EQ-901848-004': ['1001', '1002', '1003', '1004', '1010', '1089'],
+        'EQ-901849-004': ['2010', '2011',
+                          '2020', '2021', '2022', '2023', '2024', '2025', '2026',
+                          '2030', '2031', '2032', '2033', '2034', '2035', '2036', '2037', '2038', '2039',
+                          '2030', '2041', '2042', '2043', '2044', '2045', '2046', '2037', '2048', '2049',
+                          '2050',
+                          '2080', '2081'],
+        'EQ-902282-001': ['3001',
+                          '3040', '3041', '3042',
+                          '3061', '3062', '3064', '3065', '3066', '3069', ],
+        'EQ-902280-001': ['4001', '4050', '4051', '4052', '4053', '4054', '4055', '4056', '4057', '4058',
+                          '5001', '5002', '5003', '5004', '5020'],
         'EQ-901853-004': ['6102', '6103', '6104', '6105', '6106', '6200', '6202', '6204', '6207', '6208', '6209'],
-        'EQ-901849-004': ['2010', '2011', '2024', '2049'],
         'EQ-902050-003': ['11010'],
         'EQ-902052-003': ['13210'],
         'default': ['None']
-        }
+    }
 
     def __init__(self, root):
         self.start_datetime_var = tk.StringVar(root)
@@ -44,8 +55,8 @@ class ImgFTPModel:
         self.settings_use_scada_filepath_var = tk.StringVar(root)
 
         # Debug
-        self.start_datetime_var.set('YYYY-MM-DD HH:MM:SS')
-        self.end_datetime_var.set('YYYY-MM-DD HH:MM:SS')
+        self.start_datetime_var.set(datetime.combine(datetime.now(), time.min).strftime("%Y/%m/%d %H:%M:%S"))
+        self.end_datetime_var.set(datetime.combine(datetime.now(), time.max).strftime("%Y/%m/%d %H:%M:%S"))
 
         # TODO: Move traces to it's own function
         self.eq_var.trace_add('write', self.update_eq_name)
@@ -128,15 +139,15 @@ class ImgFTPModel:
 
     @property
     def list_of_months(self):
-        return [day for day in range(int(self.start_month), int(self.end_month)+1)]
+        return [day for day in range(int(self.start_month), int(self.end_month) + 1)]
 
     @property
     def list_of_days(self):
-        return [day for day in range(int(self.start_day), int(self.end_day)+1)]
+        return [day for day in range(int(self.start_day), int(self.end_day) + 1)]
 
     @property
     def inspection(self):
-        return self.inspection_var.get() if len(self.inspection_var.get())>0 else None
+        return self.inspection_var.get() if len(self.inspection_var.get()) > 0 else None
 
     @property
     def selected_reject(self):
