@@ -55,8 +55,8 @@ class ImgFTPModel:
         self.settings_use_scada_filepath_var = tk.StringVar(root)
 
         # Debug
-        self.start_datetime_var.set(datetime.combine(datetime.now(), time.min).strftime("%Y/%m/%d %H:%M:%S"))
-        self.end_datetime_var.set(datetime.combine(datetime.now(), time.max).strftime("%Y/%m/%d %H:%M:%S"))
+        self.start_datetime_var.set(datetime.combine(datetime.now(), time.min).strftime("%Y-%m-%d %H:%M:%S"))
+        self.end_datetime_var.set(datetime.combine(datetime.now(), time.max).strftime("%Y-%m-%d %H:%M:%S"))
 
         # TODO: Move traces to it's own function
         self.eq_var.trace_add('write', self.update_eq_name)
