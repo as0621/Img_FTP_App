@@ -37,20 +37,19 @@ class ImgFTPController:
         if len(sql_txid_list) > 0:
             for day in self.model.list_of_days:
                 tk_status.set(f'Getting data for day: {day}')
-                name_list = self.ftp.get_images_list(self.model.home_directory,
-                                                     self.model.eq,
-                                                     self.model.eq_number,
-                                                     self.model.start_year,
-                                                     self.model.start_month,
-                                                     f"{day:02d}",
-                                                     self.model.quality,
-                                                     self.model.selected_reject,
-                                                     self.model.inspection,
-                                                     tk_status,
-                                                     txid_list=sql_txid_list,
-                                                     )
+                self.ftp.get_images_list(self.model.home_directory,
+                                         self.model.eq,
+                                         self.model.eq_number,
+                                         self.model.start_year,
+                                         self.model.start_month,
+                                         f"{day:02d}",
+                                         self.model.quality,
+                                         self.model.selected_reject,
+                                         self.model.inspection,
+                                         tk_status,
+                                         txid_list=sql_txid_list,
+                                         )
 
-                self.ftp.get_images(name_list, tk_status)
                 tk_status.set('DONE')
         else:
             tk_status.set(f'ERROR: No {self.model.eq} {self.model.selected_reject} Rejects.')
@@ -104,32 +103,37 @@ class FTPController:
 
         # Getting all files from directory
         name_list = self.ftp.nlst()
+
+        tk_status.set(f'Filtering Images for .bmp')
         name_list = [f"{name}" for name in name_list if '.bmp' in name]
 
-        if quality == 'Gd':
-            name_list = [f"{name}" for name in name_list if ('Gd' in name and any(txid in name for txid in txid_list))]
-        elif quality == 'Bd':
-            name_list = [f"{name}" for name in name_list if ('Bd' in name and any(txid in name for txid in txid_list))]
-        # elif quality == 'Reject':
-        else:
-            name_list = [f"{name}" for name in name_list if any(txid in name for txid in txid_list)]
-
         # Inspection Filter
+        tk_status.set(f'Filtering Images for Inspection')
         if inspection:
             name_list = [f"{name}" for name in name_list if inspection in name]
 
-        return name_list
+        tk_status.set(f'Filtering Images for Gd/Bd')
+        if quality == 'Gd':
+            name_list = [f"{name}" for name in name_list if 'Gd' in name]
+        elif quality == 'Bd':
+            name_list = [f"{name}" for name in name_list if 'Bd' in name]
 
-    def get_images(self, name_list, tk_status):
-        tk_status.set('Starting Transfer...')
-        for f in name_list:
-            if tk_status.get() != 'STOP':
-                tk_status.set("Transferring " + str(f) + "....")
-                print("Transferring " + str(f) + "....")
-                with open(os.path.join(self.target_path_directory, f), 'wb') as fh:
-                    self.ftp.retrbinary('RETR ' + f, fh.write)
-            else:
-                raise Exception('Process Interrupted. Img pull is stopped.')
+        tk_status.set(f'Filtering Images for txid list')
+
+        for name in name_list:
+            if any(txid in name for txid in txid_list):
+                self.get_images_single(name, len(txid_list), tk_status)
+
+    def get_images_single(self, name, total_n, tk_status):
+        f = name
+
+        if tk_status.get() != 'STOP':
+            tk_status.set(f"Found {total_n} TxIDs. Transferring {f}....")
+            print("Transferring " + str(f) + "....")
+            with open(os.path.join(self.target_path_directory, f), 'wb') as fh:
+                self.ftp.retrbinary('RETR ' + f, fh.write)
+        else:
+            raise Exception('Process Interrupted. Img pull is stopped.')
 
 
 class SQLController:
@@ -174,4 +178,4 @@ class SQLController:
                        "WHERE Site = 'SAN' AND "
                        f"CompletedDateTime BETWEEN '{start_time}' AND '{end_time}'")
 
-        return [row[0] for row in cursor]
+        return list(set([row[0] for row in cursor if row[0] is not None]))
