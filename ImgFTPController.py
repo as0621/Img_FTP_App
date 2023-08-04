@@ -9,7 +9,7 @@ import tkinter as tk
 
 
 class ImgFTPController:
-    VERSION = "1.0.1"
+    VERSION = "1.0.2"
 
     def __init__(self, model):
         self.model = model
