@@ -9,7 +9,7 @@ import tkinter as tk
 
 
 class ImgFTPController:
-    VERSION = "1.0.0"
+    VERSION = "1.0.1"
 
     def __init__(self, model):
         self.model = model
@@ -18,37 +18,21 @@ class ImgFTPController:
 
     def get_images(self, tk_status: tk.StringVar):
         try:
-            if self.model.quality == 'Reject':
-                self.get_images_reject(tk_status)
-            else:
-                self.get_images_general(tk_status)
+            self.get_images_general(tk_status)
         except Exception as e:
             tk_status.set(f"ERROR: {e}")
             raise Exception(e)
 
-    def get_images_general(self, tk_status:tk.StringVar):
-        for day in self.model.list_of_days:
-            tk_status.set(f'Getting data for day: {day}')
-            name_list = self.ftp.get_images_list(self.model.home_directory,
-                                                 self.model.eq,
-                                                 self.model.eq_number,
-                                                 self.model.start_year,
-                                                 self.model.start_month,
-                                                 f"{day:02d}",
-                                                 self.model.quality,
-                                                 self.model.selected_reject,
-                                                 self.model.inspection,
-                                                 tk_status,
-                                                 )
-
-            self.ftp.get_images(name_list, tk_status)
-            tk_status.set('DONE')
-
-    def get_images_reject(self, tk_status: tk.StringVar):
-        sql_txid_list = self.sql.get_txid_list_from_rejects(self.model.start_datetime,
-                                                            self.model.end_datetime,
-                                                            self.model.selected_reject,
-                                                            tk_status)
+    def get_images_general(self, tk_status: tk.StringVar):
+        if self.model.quality == 'Reject':
+            sql_txid_list = self.sql.get_txid_list_from_rejects(self.model.start_datetime,
+                                                                self.model.end_datetime,
+                                                                self.model.selected_reject,
+                                                                tk_status)
+        else:
+            sql_txid_list = self.sql.get_txid_list(self.model.start_datetime,
+                                                   self.model.end_datetime,
+                                                   tk_status)
 
         if len(sql_txid_list) > 0:
             for day in self.model.list_of_days:
@@ -70,6 +54,7 @@ class ImgFTPController:
                 tk_status.set('DONE')
         else:
             tk_status.set(f'ERROR: No {self.model.eq} {self.model.selected_reject} Rejects.')
+
 
 class FTPController:
     HOSTNAME = "10.3.84.33"
@@ -122,10 +107,11 @@ class FTPController:
         name_list = [f"{name}" for name in name_list if '.bmp' in name]
 
         if quality == 'Gd':
-            name_list = [f"{name}" for name in name_list if 'Gd' in name]
+            name_list = [f"{name}" for name in name_list if ('Gd' in name and any(txid in name for txid in txid_list))]
         elif quality == 'Bd':
-            name_list = [f"{name}" for name in name_list if 'Bd' in name]
-        elif quality == 'Reject':
+            name_list = [f"{name}" for name in name_list if ('Bd' in name and any(txid in name for txid in txid_list))]
+        # elif quality == 'Reject':
+        else:
             name_list = [f"{name}" for name in name_list if any(txid in name for txid in txid_list)]
 
         # Inspection Filter
@@ -170,6 +156,22 @@ class SQLController:
         cursor.execute("SELECT [TXID] FROM [MfgFstCentral].[ENG].[vwFSTProcessRecords]   "
                        "WHERE Site = 'SAN' AND "
                        f"RejectCode = {reject_code} AND "
+                       f"CompletedDateTime BETWEEN '{start_time}' AND '{end_time}'")
+
+        return [row[0] for row in cursor]
+
+    def get_txid_list(self, start_time, end_time, tk_status):
+        # TO DO: Status
+        tk_status.set('Getting TXID List...')
+        print('Getting TXID List...')
+
+        cursor = self.conn.cursor()
+
+        print("SELECT [TXID] FROM [MfgFstCentral].[ENG].[vwFSTProcessRecords]   "
+              "WHERE Site = 'SAN' AND "
+              f"CompletedDateTime BETWEEN '{start_time}' AND '{end_time}'")
+        cursor.execute("SELECT [TXID] FROM [MfgFstCentral].[ENG].[vwFSTProcessRecords]   "
+                       "WHERE Site = 'SAN' AND "
                        f"CompletedDateTime BETWEEN '{start_time}' AND '{end_time}'")
 
         return [row[0] for row in cursor]
