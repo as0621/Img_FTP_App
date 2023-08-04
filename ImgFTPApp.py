@@ -14,7 +14,7 @@ import threading
 
 class App:
     # Constants
-    VERSION = "0.0.1"
+    VERSION = "1.0.0"
     APP_TITLE = 'FAST ImgServer Pull'
     APP_SIZE = '800x400'
 
@@ -192,7 +192,7 @@ class QualityFrame(tk.Frame):
         self.quality_title.pack(anchor='nw')
         for radio_button in self.quality_radio_buttons:
             radio_button.pack(anchor='nw')
-            radio_button.configure(state='disabled')
+            # radio_button.configure(state='disabled')
         self.quality_reject_dropdown.pack(anchor='nw')
 
         # Temporary enable reject radio
@@ -213,7 +213,7 @@ class QualityFrame(tk.Frame):
         return gd_radio_button, bd_radio_button, all_radio_button, reject_radio_button
 
     def create_quality_reject_dropdown(self):
-        dropdown = ttk.OptionMenu(self, self.model.selected_reject_var, 'None')
+        dropdown = ttk.OptionMenu(self, self.model.selected_reject_var)
         dropdown.configure(state='disabled', width=20)
         return dropdown
 
@@ -221,7 +221,9 @@ class QualityFrame(tk.Frame):
         if self.model.quality == 'Reject':
             self.quality_reject_dropdown.configure(state='active')
         else:
+            self.model.selected_reject = ''
             self.quality_reject_dropdown.configure(state='disabled')
+            # self.quality_reject_dropdown['menu'].delete(0, 'end')
 
     def refresh_reject_dropdown(self):
         self.quality_reject_dropdown['menu'].delete(0, 'end')
@@ -350,19 +352,24 @@ class ExecuteFrame(tk.Frame):
 
         self.execute_button = self.create_execute_button()
         self.execute_status_label = self.create_execute_status_label()
+        self.execute_stop_button = self.create_stop_button()
 
-        self.execute_button.pack(anchor='n')
-        self.execute_status_label.pack(anchor='n')
+        self.execute_button.pack(side='left')
+        self.execute_stop_button.pack(side='left')
+        self.execute_status_label.pack(side='left')
 
     def create_execute_button(self):
         button = ttk.Button(self, text="Execute", command=self.execute_pull)
         return button
 
+    def create_stop_button(self):
+        button = ttk.Button(self, text="Stop", command=lambda: self.status_var.set('STOP'))
+        return button
+
     def execute_pull(self):
-        thread = threading.Thread(target=self.controller.get_images, args=(self.status_var, ))
+        thread = threading.Thread(target=self.controller.get_images, args=(self.status_var,))
         thread.start()
 
     def create_execute_status_label(self):
         label = ttk.Label(self, textvariable=self.status_var)
         return label
-

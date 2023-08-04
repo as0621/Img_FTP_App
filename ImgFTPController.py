@@ -2,8 +2,6 @@
 # Aldo Siswanto
 # 2023/07/08
 
-from ImgFTPModel import ImgFTPModel
-import mysql.connector as mysql
 import pyodbc
 import os
 import ftplib
@@ -11,35 +9,42 @@ import tkinter as tk
 
 
 class ImgFTPController:
-    VERSION = "0.0.2"
+    VERSION = "1.0.0"
+
     def __init__(self, model):
         self.model = model
         self.sql = SQLController()
         self.ftp = FTPController()
-        self.target_path_directory = None
 
-    def test_print(self):
-        print(f"Executing Request\n"
-              f"-----------------\n"
-              f"start datetime: {self.model.start_datetime}\n"
-              f"end datetime: {self.model.end_datetime}\n"
-              f"home: {self.model.home_directory}\n"
-              f"eq: {self.model.eq}\n"
-              f"eq no: {self.model.eq_number}\n"
-              f"quality: {self.model.quality}\n"
-              f"reject: {self.model.selected_reject}\n"
-              f"inspection: {self.model.inspection}\n"
-              # f"save_txid: {model.settings_save_txid}\n"
-              f"use_scada: {self.model.settings_use_scada}\n")
+    def get_images(self, tk_status: tk.StringVar):
+        try:
+            if self.model.quality == 'Reject':
+                self.get_images_reject(tk_status)
+            else:
+                self.get_images_general(tk_status)
+        except Exception as e:
+            tk_status.set(f"ERROR: {e}")
+            raise Exception(e)
 
-    def test_get_txid_list(self):
-        txid_list = self.sql.get_txid_list_from_rejects(self.model.start_datetime,
-                                                        self.model.end_datetime,
-                                                        self.model.selected_reject)
+    def get_images_general(self, tk_status:tk.StringVar):
+        for day in self.model.list_of_days:
+            tk_status.set(f'Getting data for day: {day}')
+            name_list = self.ftp.get_images_list(self.model.home_directory,
+                                                 self.model.eq,
+                                                 self.model.eq_number,
+                                                 self.model.start_year,
+                                                 self.model.start_month,
+                                                 f"{day:02d}",
+                                                 self.model.quality,
+                                                 self.model.selected_reject,
+                                                 self.model.inspection,
+                                                 tk_status,
+                                                 )
 
-        print(txid_list)
+            self.ftp.get_images(name_list, tk_status)
+            tk_status.set('DONE')
 
-    def get_images(self, tk_status):
+    def get_images_reject(self, tk_status: tk.StringVar):
         sql_txid_list = self.sql.get_txid_list_from_rejects(self.model.start_datetime,
                                                             self.model.end_datetime,
                                                             self.model.selected_reject,
@@ -53,7 +58,7 @@ class ImgFTPController:
                                                      self.model.eq_number,
                                                      self.model.start_year,
                                                      self.model.start_month,
-                                                     str(day),
+                                                     f"{day:02d}",
                                                      self.model.quality,
                                                      self.model.selected_reject,
                                                      self.model.inspection,
@@ -65,7 +70,6 @@ class ImgFTPController:
                 tk_status.set('DONE')
         else:
             tk_status.set(f'ERROR: No {self.model.eq} {self.model.selected_reject} Rejects.')
-
 
 class FTPController:
     HOSTNAME = "10.3.84.33"
@@ -80,29 +84,49 @@ class FTPController:
         image_path = f'/Images/{eq_num}/{year}/{month}/{day}'
         self.ftp.cwd(image_path)
 
-    def create_dir(self, home_dir, eq, year, month, day, quality, reject):
-        self.target_path_directory = os.path.join(home_dir,
-                                                  eq,
-                                                  year,
-                                                  month,
-                                                  day,
-                                                  quality,
-                                                  reject)
+    def create_dir(self, home_dir, eq, year, month, day, quality, reject=None):
+        if reject is None:
+            self.target_path_directory = os.path.join(home_dir,
+                                                      eq,
+                                                      year,
+                                                      month,
+                                                      day,
+                                                      quality)
+        else:
+            self.target_path_directory = os.path.join(home_dir,
+                                                      eq,
+                                                      year,
+                                                      month,
+                                                      day,
+                                                      quality,
+                                                      reject)
+
         if not os.path.exists(self.target_path_directory):
             os.makedirs(self.target_path_directory)
 
     def get_images_list(self, home_dir, eq, eq_num, year, month, day, quality, reject, inspection, tk_status,
                         txid_list=None):
+        # Create Directory
         tk_status.set('Creating local directory...')
-        print("Creating local directory....")
-        self.create_dir(home_dir, eq, year, month, day, quality, reject)  # Create local directory
+        if quality == 'Reject':
+            self.create_dir(home_dir, eq, year, month, day, quality, reject)  # Create local directory
+        else:
+            self.create_dir(home_dir, eq, year, month, day, quality)
 
+        # Entering FTP Directory
         tk_status.set(f'Getting directory for {year}/{month}/{day}...')
-        print(f"Getting directory for {year}/{month}/{day}....")
         self.change_ftp_dir(eq_num, year, month, day)
 
-        name_list = self.ftp.nlst('*.bmp')
-        name_list = [f"{name}" for name in name_list if any(txid in name for txid in txid_list)]
+        # Getting all files from directory
+        name_list = self.ftp.nlst()
+        name_list = [f"{name}" for name in name_list if '.bmp' in name]
+
+        if quality == 'Gd':
+            name_list = [f"{name}" for name in name_list if 'Gd' in name]
+        elif quality == 'Bd':
+            name_list = [f"{name}" for name in name_list if 'Bd' in name]
+        elif quality == 'Reject':
+            name_list = [f"{name}" for name in name_list if any(txid in name for txid in txid_list)]
 
         # Inspection Filter
         if inspection:
@@ -113,10 +137,13 @@ class FTPController:
     def get_images(self, name_list, tk_status):
         tk_status.set('Starting Transfer...')
         for f in name_list:
-            tk_status.set("Transferring " + str(f) + "....")
-            print("Transferring " + str(f) + "....")
-            with open(os.path.join(self.target_path_directory, f), 'wb') as fh:
-                self.ftp.retrbinary('RETR ' + f, fh.write)
+            if tk_status.get() != 'STOP':
+                tk_status.set("Transferring " + str(f) + "....")
+                print("Transferring " + str(f) + "....")
+                with open(os.path.join(self.target_path_directory, f), 'wb') as fh:
+                    self.ftp.retrbinary('RETR ' + f, fh.write)
+            else:
+                raise Exception('Process Interrupted. Img pull is stopped.')
 
 
 class SQLController:
