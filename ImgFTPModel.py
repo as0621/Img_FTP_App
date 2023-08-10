@@ -7,7 +7,7 @@ from datetime import datetime, time
 
 
 class ImgFTPModel:
-    VERSION = "1.0.0"
+    VERSION = "1.1.0"
     OPTION_MENU_DEFAULT = 'Select One...'
     EQ_LIST = {'TED': 'EQ-901848-004',
                'ABL': 'EQ-901849-004',
@@ -51,6 +51,10 @@ class ImgFTPModel:
                           '13260'],
         'default': ['None']
     }
+    INSPECTION_LIST = {
+        'EQ-901853-004': ["C1_I4", "C2_I2", "C2_I3", "C2_I4"]
+    }
+    LINE = "L3"
 
     def __init__(self, root):
         self.start_datetime_var = tk.StringVar(root)
@@ -71,6 +75,13 @@ class ImgFTPModel:
 
         # TODO: Move traces to it's own function
         self.eq_var.trace_add('write', self.update_eq_name)
+
+    @property
+    def line(self):
+        return ImgFTPModel.LINE
+    @property
+    def cam_inspection_list(self):
+        return ImgFTPModel.INSPECTION_LIST[self.eq_number]
 
     @property
     def settings_use_scada_filepath(self):
